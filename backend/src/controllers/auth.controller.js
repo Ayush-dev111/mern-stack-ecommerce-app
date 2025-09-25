@@ -1,6 +1,8 @@
 import { generateToken, setCookies, storeRefreshToken } from "../lib/generateToken.js";
+import { redis } from "../lib/redis.js";
 import User from "../models/user.model.js";
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken'
 
 export const signup = async (req, res) => {
     const { fullName, email, password } = req.body;
@@ -56,10 +58,57 @@ export const signup = async (req, res) => {
 };
 
 
+export const login = async (req, res) => {
+    const {email, password} = req.body;
 
-export const login = async () => {
+    try {
+        if(!email || !password){
+            return res.status(400).json({message: "All the fields are required"})
+        };
 
+        const user = await User.findOne({email})
+        if(!user){
+            return res.status(400).json({message: "Invalid credentials"})
+        };
+
+        const isPasswordMatched = await bcrypt.compare(password, user.password);
+        if(!isPasswordMatched){
+            return res.status(400).json({message: "Invalid credentials"});
+        }
+
+        const {accessToken, refreshToken} = generateToken(user._id);
+
+        await storeRefreshToken(user._id, refreshToken);
+
+        setCookies(res, accessToken, refreshToken);
+
+        res.json({
+            id: user._id,
+            fullName: user.fullName,
+            email: user.email,
+            role: user.role
+        })
+    } catch (error) {
+        console.log("error in login controller:", error);
+        res.status(500).json({message: "Internal server error"})
+    }
 };
-export const logout = async () => {
 
+export const logout = async (req, res) => {
+    try {
+        const refreshToken = req.cookies.refreshToken;
+        if(refreshToken){
+            const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_TOKEN);
+            await redis.del(`refresh_token:${decoded.userId}`);
+        }
+
+        res.clearCookie("accessToken");
+        res.clearCookie("refreshToken");
+
+        res.json({message: "Logged Out successfully"});
+    } catch (error) {
+        console.log("Error in logout controller:", error);
+        res.status(500).json({message: "Internal server error"});
+    }
 };
+
