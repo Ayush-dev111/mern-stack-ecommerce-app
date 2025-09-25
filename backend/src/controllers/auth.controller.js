@@ -2,7 +2,7 @@ import { generateToken, setCookies, storeRefreshToken } from "../lib/generateTok
 import { redis } from "../lib/redis.js";
 import User from "../models/user.model.js";
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken';
 
 export const signup = async (req, res) => {
     const { fullName, email, password } = req.body;
@@ -56,7 +56,6 @@ export const signup = async (req, res) => {
     };
 
 };
-
 
 export const login = async (req, res) => {
     const {email, password} = req.body;
@@ -112,3 +111,32 @@ export const logout = async (req, res) => {
     }
 };
 
+export const refreshAccessToken = async  (req, res) => {
+    try {
+        const refreshToken = req.cookies.refreshToken;
+        if(!refreshToken){
+            return res.status(401).json({message: "No refresh token found"});
+        };
+
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_TOKEN);
+        const storedRefreshToken = await redis.get(`refresh_token:${decoded.userId}`);
+
+        if(storedRefreshToken !== refreshToken){
+            return res.status(401).json({message: "Invalid refresh token"});
+        };
+
+        const accessToken = jwt.sign({userId: decoded.userId}, process.env.JWT_ACCESS_TOKEN, {expiresIn: '15m'});
+        res.cookie("accessToken", accessToken,{
+            httpOnly: true,
+            secure: process.env.Node_env === 'production',
+            sameSite: 'strict',
+            maxAge: 15 * 60 * 1000,
+        });
+
+        res.json({message: "Access token refreshed successfully"});
+
+    } catch (error) {
+        console.log("Error in refreshAccessToken controller:", error);
+        res.status(500).json({message: "Internal server error"});
+    }
+};
