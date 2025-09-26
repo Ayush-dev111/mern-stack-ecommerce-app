@@ -47,6 +47,7 @@ export const signup = async (req, res) => {
             id: newUser._id,
             fullName: newUser.fullName,
             email: newUser.email,
+            role: newUser.role
         },
         message : "user signup successful"});
         
