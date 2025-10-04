@@ -41,8 +41,8 @@ const SignupPage = () => {
 						id= "name"
 						type= "text"
 						label= "Full Name"
-						value= {formData.name}
-						onChange={(e)=> setFormData({...formData, name: e.target.value})}
+						value= {formData.fullName}
+						onChange={(e)=> setFormData({...formData, fullName: e.target.value})}
 						placeholder= "John Doe"
 						Icon= {User}
 						/>
@@ -83,7 +83,7 @@ const SignupPage = () => {
 						<button 
 						 type="submit"
 						 className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm
-						 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:outline:none transition duration-150 ease-in-out disabled:opacity-50'
+						 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:outline-none transition duration-150 ease-in-out disabled:opacity-50'
 						 disabled={loading}>
 							{loading ? (
 							<>

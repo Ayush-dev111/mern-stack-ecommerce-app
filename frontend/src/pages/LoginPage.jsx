@@ -1,7 +1,7 @@
 import React from 'react'
 import { useState } from 'react';
 import { motion } from 'framer-motion'
-import { ArrowRight, Loader, Lock, Mail, User, UserPlus } from 'lucide-react';
+import { ArrowRight, Loader, Lock, LogIn, Mail} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import InputField from '../components/InputField';
 
@@ -20,7 +20,7 @@ const LoginPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        <h2 className='mt-6 text-center text-3xl font-extrabold text-blue-400'>Login your account</h2>
+        <h2 className='mt-6 text-center text-3xl font-extrabold text-blue-400'>Log in to your account</h2>
       </motion.div>
 
       <motion.div
@@ -54,8 +54,6 @@ const LoginPage = () => {
             Icon= {Lock}
             />
 
-            {/* confirm password */}
-
             <button 
              type="submit"
              className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm
@@ -67,7 +65,7 @@ const LoginPage = () => {
               Loading....
               </>): (
               <>
-               <UserPlus className='mr-2 h-5 w-5' aria-hidden='true'/>
+               <LogIn className='mr-2 h-5 w-5' aria-hidden='true'/>
                Login
               </>
               )}
