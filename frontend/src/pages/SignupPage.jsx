@@ -3,8 +3,10 @@ import { motion } from 'framer-motion'
 import { ArrowRight, Loader, Lock, Mail, User, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import InputField from '../components/InputField';
+import { useAuthStore } from '../store/useAuthStore';
+import {toast} from 'react-hot-toast'
 const SignupPage = () => {
-	const loading = false;
+	const {signup, isSigningUp} = useAuthStore();
 	const [formData, setFormData] = useState({
 		fullName: "",
 		email: "",
@@ -14,7 +16,10 @@ const SignupPage = () => {
 
 	const handleSubmit = (e) => {
 		e.preventDefault();
-		console.log(formData);
+		if(formData.password !== formData.confirmPassword){
+			return toast.error("Password do not match");
+		}
+		signup(formData);
 	}
 	return (
 
@@ -84,8 +89,8 @@ const SignupPage = () => {
 						 type="submit"
 						 className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm
 						 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:outline-none transition duration-150 ease-in-out disabled:opacity-50'
-						 disabled={loading}>
-							{loading ? (
+						 disabled={isSigningUp}>
+							{isSigningUp ? (
 							<>
 							<Loader className='mr-2 h-5 w-5 animate-spin' aria-hidden='true'/>
 							Loading....
