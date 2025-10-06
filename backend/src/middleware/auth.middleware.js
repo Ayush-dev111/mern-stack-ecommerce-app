@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js'
-export const protectRoute = (req, res, next) =>{
+export const protectRoute = async (req, res, next) =>{
     try {
         const accessToken = req.cookies.accessToken;
 
@@ -9,7 +9,7 @@ export const protectRoute = (req, res, next) =>{
         }
 
         const decoded = jwt.verify(accessToken, process.env.JWT_ACCESS_TOKEN);
-        const user = User.findById(decoded.userId).select("-password");
+        const user = await User.findById(decoded.userId).select("-password");
 
         if(!user){
             return res.status(401).json({message: "User not found"});
