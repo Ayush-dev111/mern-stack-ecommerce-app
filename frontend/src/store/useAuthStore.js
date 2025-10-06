@@ -4,7 +4,6 @@ import {axiosInstance} from '../lib/axios.js'
 
 export const useAuthStore = create((set) => ({
     user: null,
-    isCheckingAuth: true,
     isSigningUp: false,
     isLogingUp: false,
     checkingAuth: false,
@@ -16,7 +15,7 @@ export const useAuthStore = create((set) => ({
             set({user: response.data});
             toast.success("User signup successfully");
         } catch (error) {
-            toast.error(error.response.data.message || "Something went wrong");
+            toast.error(error.response?.data?.message || "Something went wrong");
         } finally {
             set({ isSigningUp: false });
         }
@@ -26,11 +25,11 @@ export const useAuthStore = create((set) => ({
     login : async (email, password) => {
         set({isLogingUp : true});
         try {
-            const response = await axiosInstance.post("auth/login", {email, password});
+            const response = await axiosInstance.post("/auth/login", {email, password});
             set({user: response.data});
             toast.success("User logged in successfully");
         } catch (error) {
-             toast.error(error.response.data.message || "Something went wrong");
+             toast.error(error.response?.data?.message || "Something went wrong");
         } finally {
             set({ isLogingUp: false });
         }
