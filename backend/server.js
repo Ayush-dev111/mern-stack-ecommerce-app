@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3500;
 connectDb();
 dotenv.config();
 
-app.use(express.json());
+app.use(express.json({limit: "10mb"}));
 app.use(cookieParser());
 app.use(cors({
     origin: process.env.CLIENT_URL,

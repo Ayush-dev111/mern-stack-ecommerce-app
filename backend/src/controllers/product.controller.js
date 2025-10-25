@@ -51,7 +51,7 @@ export const createProduct = async (req, res) => {
             category,
         })
 
-        res.status(201).json({product,message: "Product created successfully"});
+        res.status(201).json(product);
 
     } catch (error) {
         console.log("Error in createProduct route:", error.message);
