@@ -9,14 +9,24 @@ import { useAuthStore } from './store/useAuthStore'
 import LoadingSpinner from './components/LoadingSpinner'
 import AdminPage from './pages/AdminPage'
 import CategoryPage from './pages/CategoryPage'
+import { useCartStore } from './store/useCartStore'
+import CartPage from './pages/CartPage'
+import PurchaseCancelPage from './pages/PurchaseCancelPage'
+import PurchaseSuccessPage from './pages/PurchaseSuccessPage.jsx'
 const App = () => {
   const { checkAuth, user, checkingAuth }= useAuthStore()
+  const {getCartItems} = useCartStore();
 
   useEffect(()=>{
     checkAuth()
   }, [checkAuth]);
   
-  
+  useEffect(()=>{
+    if(!user) return;
+    getCartItems();
+  }, [getCartItems, user]);
+
+
   if(checkingAuth) return <LoadingSpinner/>
   return (
     <div className='min-h-screen bg-gray-900 text-white relative overflow-hidden'>
@@ -39,6 +49,9 @@ const App = () => {
           <Route path='/login' element={!user ? <LoginPage /> : <Navigate to={'/'} />} />
           <Route path='/secret-dashboard' element={user?.role === "admin" ? <AdminPage /> : <Navigate to={'/'} />} />
           <Route path='/category/:category' element={<CategoryPage/>} />
+          <Route path='/cart' element={user ? <CartPage /> : <Navigate to='/login' />} />
+         <Route path="/purchase-success" element={<PurchaseSuccessPage />} />
+					<Route path='/purchase-cancel' element={<PurchaseCancelPage />} />
         </Routes>
       </div>
 

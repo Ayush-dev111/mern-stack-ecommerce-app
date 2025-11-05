@@ -17,7 +17,7 @@ export const getFeaturedProducts = async (_req, res) => {
     try {
         let featuredProducts = await redis.get("featured_Products");
         if(featuredProducts){
-            return res.json(JSON.parse("featured_products"))
+            return res.json(JSON.parse(featuredProducts));
         };
 
         featuredProducts = await Product.find({isFeatured: true}).lean();
@@ -97,7 +97,7 @@ export const getRecommendedProducts = async (req, res)=> {
             {
                 $project: {
                     _id: 1,
-                    name: 1,
+                    productName: 1,
                     description: 1,
                     image: 1,
                     price: 1,

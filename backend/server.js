@@ -7,6 +7,7 @@ import productRoutes from './src/routes/product.route.js';
 import cartRoutes from './src/routes/cart.routes.js';
 import couponRoutes from './src/routes/coupon.route.js';
 import paymentRoutes from './src/routes/payment.route.js';
+import analyticsRoutes from './src/routes/analytics.route.js';
 import cors from 'cors';
 const app = express();
 const PORT = process.env.PORT || 3500;
@@ -24,6 +25,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 
 
