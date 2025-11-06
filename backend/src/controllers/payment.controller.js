@@ -76,41 +76,57 @@ export const createCheckoutSession = async (req, res) => {
 export const checkoutSuccess = async (req, res) => {
   try {
     const { sessionId } = req.body;
-    console.log("Checkout Success hit:", { sessionId });
-
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    const metadata = session.metadata;
-    console.log("Session metadata:", metadata);
-
-    // ✅ Check if order already exists
-    const existingOrder = await Order.findOne({ stripeSessionId: sessionId });
-    if (existingOrder) {
-      console.log("Order already exists, skipping duplicate creation.");
-      return res.status(200).json({ message: "Order already processed" });
+    if (!sessionId) {
+      return res.status(400).json({ error: "Missing sessionId" });
     }
 
-    const products = JSON.parse(metadata.products);
-    const newOrder = new Order({
+    console.log("✅ Checkout Success hit:", sessionId);
+
+    // Retrieve session details safely
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ["line_items.data.price.product"],
+    });
+    const metadata = session.metadata || {};
+    console.log("🧾 Session metadata:", metadata);
+
+    // --- Prevent duplicates ---
+    const existingOrder = await Order.findOne({ stripeSessionId: session.id });
+    if (existingOrder) {
+      console.log("⚠️ Order already exists for this Stripe session");
+      return res.status(200).json({
+        message: "Order already processed",
+        order: existingOrder,
+      });
+    }
+
+    // --- Create new order ---
+    const products = JSON.parse(metadata.products || "[]");
+
+    const newOrder = await Order.create({
       user: metadata.userId,
       products: products.map((p) => ({
         product: p.id,
         quantity: p.quantity,
         price: p.price,
       })),
-      stripeSessionId: sessionId,
+      stripeSessionId: session.id, // use session.id from Stripe (not body)
       totalAmount: session.amount_total / 100,
       paymentStatus: session.payment_status,
       couponCode: metadata.couponCode || null,
     });
 
-    await newOrder.save();
+    console.log("✅ Order created:", newOrder._id);
 
-    res.status(200).json({ message: "Order created successfully" });
+    res.status(200).json({
+      message: "Order created successfully",
+      order: newOrder,
+    });
   } catch (error) {
-    console.error("Error in checkoutSuccess:", error);
+    console.error("❌ Error in checkoutSuccess:", error);
     res.status(500).json({ error: error.message });
   }
 };
+
 
 
 
