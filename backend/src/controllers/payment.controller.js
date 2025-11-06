@@ -2,6 +2,7 @@ import Coupon from "../models/coupon.model.js";
 import Order from "../models/order.model.js";
 import { stripe } from "../lib/stripe.js";
 
+// ---------------- CREATE CHECKOUT SESSION ----------------
 export const createCheckoutSession = async (req, res) => {
 	try {
 		const { products, couponCode } = req.body;
@@ -13,7 +14,7 @@ export const createCheckoutSession = async (req, res) => {
 		let totalAmount = 0;
 
 		const lineItems = products.map((product) => {
-			const amount = Math.round(product.price * 100); // stripe wants u to send in the format of cents
+			const amount = Math.round(product.price * 100); // stripe wants cents
 			totalAmount += amount * product.quantity;
 
 			return {
@@ -31,9 +32,15 @@ export const createCheckoutSession = async (req, res) => {
 
 		let coupon = null;
 		if (couponCode) {
-			coupon = await Coupon.findOne({ code: couponCode, userId: req.user._id, isActive: true });
+			coupon = await Coupon.findOne({
+				code: couponCode,
+				userId: req.user._id,
+				isActive: true,
+			});
 			if (coupon) {
-				totalAmount -= Math.round((totalAmount * coupon.discountPercentage) / 100);
+				totalAmount -= Math.round(
+					(totalAmount * coupon.discountPercentage) / 100
+				);
 			}
 		}
 
@@ -66,76 +73,81 @@ export const createCheckoutSession = async (req, res) => {
 		if (totalAmount >= 20000) {
 			await createNewCoupon(req.user._id);
 		}
-		res.status(200).json({ url: session.url, totalAmount: totalAmount / 100 });
+
+		res.status(200).json({
+			url: session.url,
+			totalAmount: totalAmount / 100,
+		});
 	} catch (error) {
 		console.error("Error processing checkout:", error);
-		res.status(500).json({ message: "Error processing checkout", error: error.message });
+		res.status(500).json({
+			message: "Error processing checkout",
+			error: error.message,
+		});
 	}
 };
 
+// ---------------- CHECKOUT SUCCESS (FIXED) ----------------
 export const checkoutSuccess = async (req, res) => {
-  try {
-    const { sessionId } = req.body;
-    if (!sessionId) {
-      return res.status(400).json({ error: "Missing sessionId" });
-    }
+	try {
+		const { sessionId } = req.body;
+		if (!sessionId) {
+			return res.status(400).json({ error: "Missing sessionId" });
+		}
 
-    console.log("✅ Checkout Success hit:", sessionId);
+		console.log("✅ Checkout Success hit:", sessionId);
 
-    // Retrieve session details safely
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ["line_items.data.price.product"],
-    });
-    const metadata = session.metadata || {};
-    console.log("🧾 Session metadata:", metadata);
+		const session = await stripe.checkout.sessions.retrieve(sessionId, {
+			expand: ["line_items.data.price.product"],
+		});
+		const metadata = session.metadata || {};
+		console.log("🧾 Session metadata:", metadata);
 
-    // --- Prevent duplicates ---
-    const existingOrder = await Order.findOne({ stripeSessionId: session.id });
-    if (existingOrder) {
-      console.log("⚠️ Order already exists for this Stripe session");
-      return res.status(200).json({
-        message: "Order already processed",
-        order: existingOrder,
-      });
-    }
+		const products = JSON.parse(metadata.products || "[]");
 
-    // --- Create new order ---
-    const products = JSON.parse(metadata.products || "[]");
+		// ✅ Atomically upsert order to prevent duplicates
+		const order = await Order.findOneAndUpdate(
+			{ stripeSessionId: session.id },
+			{
+				$setOnInsert: {
+					user: metadata.userId,
+					products: products.map((p) => ({
+						product: p.id,
+						quantity: p.quantity,
+						price: p.price,
+					})),
+					stripeSessionId: session.id,
+					totalAmount: session.amount_total / 100,
+					paymentStatus: session.payment_status,
+					couponCode: metadata.couponCode || null,
+				},
+			},
+			{ new: true, upsert: true }
+		);
 
-    const newOrder = await Order.create({
-      user: metadata.userId,
-      products: products.map((p) => ({
-        product: p.id,
-        quantity: p.quantity,
-        price: p.price,
-      })),
-      stripeSessionId: session.id, // use session.id from Stripe (not body)
-      totalAmount: session.amount_total / 100,
-      paymentStatus: session.payment_status,
-      couponCode: metadata.couponCode || null,
-    });
+		console.log("✅ Order processed:", order._id);
 
-    console.log("✅ Order created:", newOrder._id);
-
-    res.status(200).json({
-      message: "Order created successfully",
-      order: newOrder,
-    });
-  } catch (error) {
-    console.error("❌ Error in checkoutSuccess:", error);
-    res.status(500).json({ error: error.message });
-  }
+		res.status(200).json({
+			success: true,
+			message: "Order processed successfully",
+			order,
+		});
+	} catch (error) {
+		console.error("❌ Error in checkoutSuccess:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error processing order",
+			error: error.message,
+		});
+	}
 };
 
-
-
-
+// ---------------- HELPERS ----------------
 async function createStripeCoupon(discountPercentage) {
 	const coupon = await stripe.coupons.create({
 		percent_off: discountPercentage,
 		duration: "once",
 	});
-
 	return coupon.id;
 }
 
@@ -145,11 +157,10 @@ async function createNewCoupon(userId) {
 	const newCoupon = new Coupon({
 		code: "GIFT" + Math.random().toString(36).substring(2, 8).toUpperCase(),
 		discountPercentage: 10,
-		expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-		userId: userId,
+		expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+		userId,
 	});
 
 	await newCoupon.save();
-
 	return newCoupon;
 }
