@@ -197,4 +197,4 @@ Your MERN e-commerce app is now live! Share your Vercel URL with others.
 ### Your URLs:
 
 - **Frontend**: `https://your-app.vercel.app`
-- **Backend API**: `https://your-api.onrender.com`
+- **Backend API**: `https://mern-stack-ecommerce-app-1.onrender.com`
