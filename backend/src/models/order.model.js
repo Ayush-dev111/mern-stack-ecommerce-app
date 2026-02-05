@@ -39,8 +39,7 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// Add index for faster stripe session lookups
-orderSchema.index({ stripeSessionId: 1 });
+// Add index for faster user order lookups (stripeSessionId already indexed via unique: true)
 orderSchema.index({ user: 1, createdAt: -1 });
 
 const Order = mongoose.model("Order", orderSchema);
