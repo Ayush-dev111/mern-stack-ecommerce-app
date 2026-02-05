@@ -17,6 +17,7 @@ export const useAuthStore = create((set, get) => ({
         password,
       });
       set({ user: response.data });
+      localStorage.setItem("mern_is_logged_in", "true");
       toast.success("User signup successfully");
     } catch (error) {
       toast.error(error.response?.data?.message || "Something went wrong");
@@ -33,6 +34,7 @@ export const useAuthStore = create((set, get) => ({
         password,
       });
       set({ user: response.data });
+      localStorage.setItem("mern_is_logged_in", "true");
       toast.success("User logged in successfully");
     } catch (error) {
       toast.error(error.response?.data?.message || "Something went wrong");
@@ -45,6 +47,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       await axiosInstance.post("/auth/logout");
       set({ user: null });
+      localStorage.removeItem("mern_is_logged_in");
       toast.success("Logout successfully");
     } catch (error) {
       toast.error(error.response?.data?.message || "Something went wrong");
@@ -52,12 +55,19 @@ export const useAuthStore = create((set, get) => ({
   },
 
   checkAuth: async () => {
+    // Avoid making the request if we know we aren't logged in to keep console clean
+    if (localStorage.getItem("mern_is_logged_in") !== "true") {
+      set({ user: null, checkingAuth: false });
+      return;
+    }
+
     set({ checkingAuth: true });
     try {
       const response = await axiosInstance.get("/auth/profile");
       set({ user: response.data });
     } catch (error) {
       set({ user: null });
+      localStorage.removeItem("mern_is_logged_in");
     } finally {
       set({ checkingAuth: false });
     }
@@ -86,6 +96,12 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    
+    // Skip retry logic for checkAuth and refreshToken requests to avoid redundant 401s in console
+    if (originalRequest.url?.includes("/auth/profile") || originalRequest.url?.includes("/auth/refresh-token")) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
@@ -103,7 +119,7 @@ axiosInstance.interceptors.response.use(
 
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        // If refresh fails, redirect to login or handle as needed
+        // If refresh fails, logout and reject
         useAuthStore.getState().logout();
         return Promise.reject(refreshError);
       }
